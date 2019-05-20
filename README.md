@@ -1,4 +1,4 @@
-# liquality-sub-swap
+# submarine-swap
 
 ## Project setup
 ```
