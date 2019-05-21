@@ -22,7 +22,8 @@
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
     "vue": "^2.6.10",
-    "vue-async-computed": "^3.6.1"
+    "vue-async-computed": "^3.6.1",
+    "webln": "^0.2.1"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.7.0",

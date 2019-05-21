@@ -14,10 +14,10 @@ class LN {
     }
   }
 
-  async addInvoice (value, memo, preimage) {
+  async addInvoice (value, memo) {
     return request.post({
       ...this._baseOptions,
-      body: { value, memo, r_preimage: Buffer.from(preimage, 'hex').toString('base64') },
+      body: { value, memo },
       url: `${this._baseUrl}/v1/invoices`
     })
   }

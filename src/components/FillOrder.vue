@@ -2,17 +2,17 @@
   <div>
     <div class="form">
       <div class="form-group">
-        <label for="invoice">Invoice</label>
+        <label for="orderCode">Order</label>
         <div class="input-group">
-          <input v-model="invoice" type="text" class="form-control" placeholder="Enter the order invoice">
+          <input v-model="orderCode" type="text" class="form-control" placeholder="Enter the order data">
           <div class="input-group-append">
             <span class="input-group-text">⚡</span>
           </div>
         </div>
-        <small class="form-text text-muted">Lightning network invoice payment request</small>
+        <small class="form-text text-muted">Order data obtained from counterparty</small>
       </div>
       <div v-if="order">
-        <div class="invoice">
+        <div class="order">
           <table class="table">
             <tbody>
               <tr>
@@ -25,7 +25,7 @@
               </tr>
             </tbody>
           </table>
-          <button v-if="invoice" class="btn btn-primary" v-on:click="fill()">Claim</button>
+          <button v-if="order" class="btn btn-primary" v-on:click="fill()">Claim</button>
         </div>
       </div>
     </div>
@@ -37,22 +37,22 @@
 </template>
 
 <script>
-import { parseOrder, fillOrder } from '../utils/order'
+import { decodeOrder, fillOrder } from '../utils/order'
 
 export default {
   name: 'FillOrder',
   data: () => ({
-    invoice: '',
+    orderCode: '',
     tx: ''
   }),
   computed: {
     order: function () {
-      return this.invoice.startsWith('ln') ? parseOrder(this.invoice) : null
+      return decodeOrder(this.orderCode)
     }
   },
   methods: {
     fill: async function () {
-      this.tx = await fillOrder(this.invoice)
+      this.tx = await fillOrder(this.orderCode)
     }
   }
 }

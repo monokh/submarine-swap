@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-      <a class="navbar-brand" href="#">U Boat</a>
+      <a class="navbar-brand" href="#">SUB</a>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -38,6 +38,15 @@ export default {
   data: () => ({
     selectedTab: 'place'
   }),
+  created: async function () {
+    // Setup WebLN
+    try {
+      await WebLN.requestProvider()
+    }
+    catch(err) {
+      console.log('WEBLN not available');
+    }
+  },
   methods: {
     tab: function (name) {
       this.selectedTab = name

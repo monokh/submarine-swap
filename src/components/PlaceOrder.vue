@@ -21,14 +21,14 @@
       </div>
       <button class="btn btn-primary" v-on:click="create">Create</button>
     </div>
-    <div v-if="invoice" class="invoice card">
-      <h2>Order Inovice</h2>
+    <div v-if="order" class="order card">
+      <h2>Order</h2>
       <p>Share this with the counter party to complete the swap</p>
-      <div class="invoice-qr">
-        <img :src="`data:${invoiceQr}`" />
+      <div class="order-qr">
+        <img :src="`data:${orderQr}`" />
       </div>
-      <div class="invoice-text">
-        {{ invoice }}
+      <div class="order-text">
+        {{ order }}
       </div>
     </div>
   </div>
@@ -43,16 +43,13 @@ export default {
   data: () => ({
     recipientAddress: '',
     amount: 5000,
-    invoice: '',
-    invoiceQr: '',
-    transaction: ''
+    order: '',
+    orderQr: ''
   }),
   methods: {
     create: async function () {
-      const order = await createOrder(this.amount, this.recipientAddress)
-      this.transaction = order.transaction
-      this.invoice = order.invoice
-      this.invoiceQr = await QRCode.toDataURL(order.invoice)
+      this.order = await createOrder(this.amount, this.recipientAddress)
+      this.orderQr = await QRCode.toDataURL(this.order)
     }
   }
 }
@@ -60,7 +57,7 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
-  .invoice {
+  .order {
     margin: 20px 0;
     padding: 20px;
     width: 500px;

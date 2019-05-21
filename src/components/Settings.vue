@@ -1,11 +1,9 @@
 <template>
   <div class="form">
-    <div class="form-group">
+    <div v-if="!webLNAvailable" class="form-group">
       <label for="lndApiUrl">LND Rest Api path</label>
       <input v-model="lndApiUrl" type="text" class="form-control" id="lndApiUrl" placeholder="Enter url">
       <small class="form-text text-muted">LND rest interface.</small>
-    </div>
-    <div class="form-group">
       <label for="lndMacaroon">LND admin.macaroon</label>
       <input v-on:change="onMacaroonFileChange" type="file" class="form-control-file" id="lndMacaroon" placeholder="Upload admin.macaroon">
       <small class="form-text text-muted">LND admin.macaroon file</small>
@@ -34,11 +32,24 @@
 </template>
 
 <script>
+import * as WebLN from 'webln'
 import { settings, updateSettings } from '../utils/settings'
 
 export default {
   name: 'Settings',
-  data: () => (settings),
+  data: () => ({
+    ...settings,
+    webLNAvailable: false
+  }),
+  created: async function () {
+    try {
+      await WebLN.requestProvider()
+      this.webLNAvailable = true
+    }
+    catch(err) {
+      this.webLNAvailable = false
+    }
+  },
   methods: {
     save: function () {
       updateSettings({
@@ -54,7 +65,6 @@ export default {
       const reader = new FileReader()
       reader.onload = e => {
         const buffer = Buffer.from(e.target.result)
-        console.log(e.target.result)
         this.macaroon = buffer.toString('hex')
       }
       reader.readAsArrayBuffer(e.target.files[0])
