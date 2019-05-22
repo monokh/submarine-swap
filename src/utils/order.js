@@ -3,8 +3,9 @@ import BitcoinJsLibSwapProvider from '@liquality/bitcoin-bitcoinjs-lib-swap-prov
 import BitcoreRpcProvider from '@liquality/bitcoin-bitcore-rpc-provider'
 import BitcoinNetworks from '@liquality/bitcoin-networks'
 import LNPayReq from 'bolt11'
-import * as WebLN from 'webln'
 import LN from './ln'
+import * as WebLN from 'webln'
+import LNApiProvider from './lnApiProvider'
 import { settings } from './settings'
 
 async function getClients () {
@@ -12,24 +13,24 @@ async function getClients () {
   bitcoin.addProvider(new BitcoreRpcProvider(settings.bitcoinUrl, settings.bitcoinUsername, settings.bitcoinPassword))
   bitcoin.addProvider(new BitcoinJsLibSwapProvider({ network: BitcoinNetworks[settings.bitcoinNetwork] }))
 
-  // TODO: put into class that provides generic interface
-  let ln, webln
+  let lnProvider
   try {
-    webln = await WebLN.requestProvider()
-  }
-  catch(err) {
-    ln = new LN(settings.lndApiUrl, settings.macaroon)
+    lnProvider = await WebLN.requestProvider()
+  } catch (err) {
+    lnProvider = new LNApiProvider(settings.lndApiUrl, settings.macaroon)
   }
 
-  return { bitcoin, ln, webln }
+  const ln = new LN(lnProvider)
+
+  return { bitcoin, ln }
 }
 
 async function createOrder (value, recipientAddress) {
   const { bitcoin, ln } = await getClients()
   const refundAddress = (await bitcoin.wallet.getUnusedAddress()).address
   const expiration = parseInt(new Date().getTime() / 1000) + 43200 // 12 hours ahead
-  const invoice = await ln.addInvoice(value.toString(), 'Submarinesssss')
-  const invoiceData = LNPayReq.decode(invoice.payment_request)
+  const invoice = await ln.makeInvoice({ amount: value, defaultMemo: 'Submarinesssss' })
+  const invoiceData = LNPayReq.decode(invoice.paymentRequest)
   const preimageHash = invoiceData.tags.find(tag => tag.tagName === 'payment_hash').data
   const initiationTxHash = await bitcoin.swap.initiateSwap(value, recipientAddress, refundAddress, preimageHash, expiration)
 
@@ -40,7 +41,7 @@ async function createOrder (value, recipientAddress) {
     refundAddress,
     preimageHash,
     expiration,
-    invoice: invoice.payment_request
+    invoice: invoice.paymentRequest
   }
   const order = encodeOrder(payload)
   return order
@@ -49,8 +50,8 @@ async function createOrder (value, recipientAddress) {
 async function fillOrder (rawOrder) {
   const { bitcoin, ln } = await getClients()
   const order = decodeOrder(rawOrder)
-  const payment = await ln.payInvoice(order.invoice)
-  const preimageFromPayment = Buffer.from(payment.payment_preimage, 'base64').toString('hex')
+  const payment = await ln.sendPayment(order.invoice)
+  const preimageFromPayment = payment.preimage
   const claimTxHash = await bitcoin.swap.claimSwap(
     order.tx, order.recipientAddress, order.refundAddress, preimageFromPayment, order.expiration
   )

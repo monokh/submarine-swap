@@ -45,8 +45,7 @@ export default {
     try {
       await WebLN.requestProvider()
       this.webLNAvailable = true
-    }
-    catch(err) {
+    } catch (err) {
       this.webLNAvailable = false
     }
   },

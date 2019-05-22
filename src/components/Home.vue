@@ -29,6 +29,7 @@
 </template>
 
 <script>
+import * as WebLN from 'webln'
 import PlaceOrder from './PlaceOrder.vue'
 import FillOrder from './FillOrder.vue'
 import Settings from './Settings.vue'
@@ -42,10 +43,7 @@ export default {
     // Setup WebLN
     try {
       await WebLN.requestProvider()
-    }
-    catch(err) {
-      console.log('WEBLN not available');
-    }
+    } catch (err) {}
   },
   methods: {
     tab: function (name) {
@@ -65,9 +63,6 @@ export default {
   .home {
     width: 60%;
     margin: 0 auto;
-  }
-
-  h3{
   }
 
   .tab-content {
