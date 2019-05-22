@@ -25,22 +25,23 @@ async function getClients () {
   return { bitcoin, ln }
 }
 
-async function createOrder (value, recipientAddress) {
+async function createOrder (bitcoinAmount, lightningAmount, recipientAddress) {
   const { bitcoin, ln } = await getClients()
   const refundAddress = (await bitcoin.wallet.getUnusedAddress()).address
-  const expiration = parseInt(new Date().getTime() / 1000) + 43200 // 12 hours ahead
-  const invoice = await ln.makeInvoice({ amount: value, defaultMemo: 'Submarinesssss' })
+  const invoice = await ln.makeInvoice({ amount: lightningAmount, defaultMemo: 'Submarinesssss' }) // TODO: relay expiration
   const invoiceData = LNPayReq.decode(invoice.paymentRequest)
+  const expiryTag = invoiceData.tags.find(tag => tag.tagName === 'expiry')
+  const expiry = expiryTag ? expiryTag.data : 3600
+  const bitcoinExpiration = parseInt(new Date().getTime() / 1000) + (expiry * 2) // Leave enough time for claim
   const preimageHash = invoiceData.tags.find(tag => tag.tagName === 'payment_hash').data
-  const initiationTxHash = await bitcoin.swap.initiateSwap(value, recipientAddress, refundAddress, preimageHash, expiration)
+  const initiationTxHash = await bitcoin.swap.initiateSwap(bitcoinAmount, recipientAddress, refundAddress, preimageHash, bitcoinExpiration)
 
   const payload = {
     tx: initiationTxHash,
-    value,
+    bitcoinAmount: bitcoinAmount,
     recipientAddress,
     refundAddress,
-    preimageHash,
-    expiration,
+    bitcoinExpiration: bitcoinExpiration,
     invoice: invoice.paymentRequest
   }
   const order = encodeOrder(payload)
@@ -53,9 +54,20 @@ async function fillOrder (rawOrder) {
   const payment = await ln.sendPayment(order.invoice)
   const preimageFromPayment = payment.preimage
   const claimTxHash = await bitcoin.swap.claimSwap(
-    order.tx, order.recipientAddress, order.refundAddress, preimageFromPayment, order.expiration
+    order.tx, order.recipientAddress, order.refundAddress, preimageFromPayment, order.bitcoinExpiration
   )
   return claimTxHash
+}
+
+async function verifyOrder (order) {
+  const { bitcoin } = await getClients()
+  const verified = await bitcoin.swap.verifyInitiateSwapTransaction(order.tx, order.bitcoinAmount, order.recipientAddress, order.refundAddress, order.preimageHash, order.bitcoinExpiration)
+  return verified
+}
+
+async function getTransaction (txHash) {
+  const { bitcoin } = await getClients()
+  return bitcoin.chain.getTransactionByHash(txHash)
 }
 
 function encodeOrder (order) {
@@ -64,7 +76,16 @@ function encodeOrder (order) {
 
 function decodeOrder (rawOrder) {
   const rawJson = Buffer.from(rawOrder, 'base64').toString()
-  return rawJson.startsWith('{') ? JSON.parse(rawJson) : null
+  const order = rawJson.startsWith('{') ? JSON.parse(rawJson) : null
+  if (order) {
+    const invoiceData = LNPayReq.decode(order.invoice)
+    const expiryTag = invoiceData.tags.find(tag => tag.tagName === 'expiry')
+    order.preimageHash = invoiceData.tags.find(tag => tag.tagName === 'payment_hash').data
+    order.lightningAmount = invoiceData.satoshis
+    order.lightningExpiration = invoiceData.timestamp + (expiryTag ? expiryTag.data : 3600)
+    order.verified = false
+  }
+  return order
 }
 
-export { createOrder, fillOrder, decodeOrder }
+export { createOrder, fillOrder, verifyOrder, getTransaction, encodeOrder, decodeOrder }
